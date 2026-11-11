@@ -164,6 +164,31 @@ mark{background:var(--hl);color:var(--hl-ink);border-radius:2px;padding:0 1px}
 .hlbar .t{border:0;background:transparent;color:var(--paper);font-size:13px;padding:5px 8px;border-radius:8px;white-space:nowrap}
 .hlbar .t:hover{background:rgba(255,255,255,.12)}
 .hlbar .sep{width:1px;height:22px;background:rgba(255,255,255,.25)}
+/* 펜 모드 */
+.penbtn.on{background:var(--seal);border-color:var(--seal);color:#fff}
+.penbar{position:sticky;top:109px;z-index:9;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--seal-soft);border:1px solid color-mix(in srgb,var(--seal) 35%,transparent);border-radius:12px;padding:9px 12px;margin:8px 0 2px}
+.penbar[hidden]{display:none}
+.penbar .msg{flex:1;min-width:150px;line-height:1.35}
+.penbar .msg b{color:var(--seal);font-size:14.5px}
+.penbar .msg small{display:block;color:var(--ink2);font-size:12px}
+.penbar .cols{display:flex;gap:6px}
+.penbar .sw{width:28px;height:28px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--line2);padding:0}
+.penbar .sw.on{box-shadow:0 0 0 2.5px var(--seal)}
+.penbar .sw.y{background:#fff59d}.penbar .sw.g{background:#b9f0b4}.penbar .sw.p{background:#ffc4dc}.penbar .sw.b{background:#bfe0ff}
+.penbar .sw.u{background:var(--card);font-weight:800;font-size:12px;text-decoration:underline;text-decoration-color:var(--seal);text-decoration-thickness:2px}
+.penbar .end{border:0;background:var(--seal);color:#fff;border-radius:9px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+body.pen-on .art .body{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='%23fff59d' stroke='%23b3261e' stroke-width='1.6'%3E%3Cpath d='m15 4 5 5L9 20H4v-5z'/%3E%3C/svg%3E") 3 22,text}
+.art .acts button.pen{color:var(--seal)}
+/* 확인 창 */
+.modal{position:fixed;inset:0;z-index:80;background:rgba(20,16,10,.45);display:grid;place-items:center;padding:20px;animation:fade .15s ease}
+@keyframes fade{from{opacity:0}}
+.modal .box{background:var(--card);color:var(--ink);border-radius:16px;padding:22px 20px 16px;width:min(340px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.modal .box .ic{font-size:30px}
+.modal .box p{margin:8px 0 18px;font-size:16px;font-weight:600;line-height:1.5}
+.modal .box p small{display:block;font-size:13px;font-weight:400;color:var(--ink2);margin-top:4px}
+.modal .btns{display:flex;gap:8px}
+.modal .btns button{flex:1;height:44px;border-radius:11px;font-size:15px;font-weight:600;border:1px solid var(--line2);background:var(--card)}
+.modal .btns .ok{background:var(--seal);border-color:var(--seal);color:#fff}
 /* 책갈피 */
 .art.bm{box-shadow:inset 3px 0 0 var(--seal);padding-left:12px}
 .bmk-memo{font-family:var(--sans);font-size:13px;color:var(--seal);background:var(--seal-soft);border-radius:8px;padding:3px 10px;margin:6px 0 2px;display:inline-block}
@@ -194,6 +219,12 @@ mark{background:var(--hl);color:var(--hl-ink);border-radius:2px;padding:0 1px}
   .tools .find{min-width:0}
   .tools .cnt{min-width:0}
   .tools .iconbtn{padding:0 8px}
+  .tools .penbtn .lbl{display:none}
+  .penbar{top:108px;padding:8px 10px;gap:8px 10px}
+  .penbar .msg{min-width:0}
+  .penbar .msg small{display:none}
+  .penbar .cols{order:3;width:100%;justify-content:space-between}
+  .penbar .sw{width:34px;height:34px}
 }
 @media (min-width:761px){ .tocbtn{display:none!important} }
 @media print{ header.top,.tools,.toc,.acts,.back{display:none!important} .lawview{display:block} }
@@ -336,6 +367,21 @@ async function copyText(s) {
   try { await navigator.clipboard.writeText(s); }
   catch { const ta = document.createElement('textarea'); ta.value = s; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   toast('복사했어요');
+}
+function confirmBox(msg, sub, okLabel = '예', cancelLabel = '아니요', icon = '🖍') {
+  return new Promise((res) => {
+    const m = document.createElement('div'); m.className = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+    m.innerHTML = `<div class="box"><div class="ic">${icon}</div><p>${esc(msg)}${sub ? `<small>${esc(sub)}</small>` : ''}</p>
+      <div class="btns"><button class="no">${esc(cancelLabel)}</button><button class="ok">${esc(okLabel)}</button></div></div>`;
+    document.body.appendChild(m);
+    const done = (v) => { m.remove(); removeEventListener('keydown', key); res(v); };
+    const key = (e) => { if (e.key === 'Escape') done(false); if (e.key === 'Enter') done(true); };
+    addEventListener('keydown', key);
+    m.querySelector('.ok').onclick = () => done(true);
+    m.querySelector('.no').onclick = () => done(false);
+    m.onclick = (e) => { if (e.target === m) done(false); };
+    m.querySelector('.ok').focus();
+  });
 }
 const lawGoKr = (name, n) => `https://www.law.go.kr/법령/${encodeURIComponent(nz(name))}${n ? '/' + encodeURIComponent(n) : ''}`;
 const favs = () => store.get('favs', []);
@@ -658,6 +704,7 @@ async function renderLaw(id, target) {
         <div class="ah"><span class="lb">${esc(it.n)}</span><span class="tt">${it.title ? '(' + esc(it.title) + ')' : ''}</span>
           <span class="acts">
             <button data-act="bm" class="${bmk ? 'on' : ''}" title="책갈피" aria-label="책갈피">${bmk ? ICON.bmOn : ICON.bm}</button>
+            <button data-act="pen" class="pen" title="형광펜으로 색칠하기" aria-label="형광펜으로 색칠하기">${ICON.pen}</button>
             <button data-act="copy" title="조문 복사" aria-label="조문 복사">${ICON.copy}</button>
             ${online ? `<button data-act="link" title="법제처 원문" aria-label="법제처 원문">${ICON.link}</button>` : ''}
           </span></div>
@@ -687,6 +734,12 @@ async function renderLaw(id, target) {
           <span class="cnt" id="cnt"></span>
           <button class="iconbtn" id="fsDown" title="글자 작게">가−</button>
           <button class="iconbtn" id="fsUp" title="글자 크게">가+</button>
+          <button class="iconbtn penbtn" id="penBtn" title="형광펜으로 색칠하기">${ICON.pen}<span class="lbl">펜</span></button>
+        </div>
+        <div class="penbar" id="penbar" hidden>
+          <div class="msg"><b>🖍 중요 부위에 색칠하세요</b><small>조문 문구를 끌어서 선택하면 고른 색으로 칠해져요. 칠한 곳을 누르면 색 바꾸기·지우기</small></div>
+          <div class="cols">${['y','g','p','b','u'].map((c) => `<button class="sw ${c}" data-pc="${c}" title="${HL_NAME[c]}" aria-label="${HL_NAME[c]}">${c === 'u' ? '가' : ''}</button>`).join('')}</div>
+          <button class="end" id="penEnd">펜 종료</button>
         </div>
         <div id="arts">${arts}</div>
       </div>
@@ -694,7 +747,20 @@ async function renderLaw(id, target) {
   for (const el of app.querySelectorAll('.art')) applyHls(el.querySelector('.body'), law.id, el.dataset.n);
   setupHighlighter(law);
   const tocEl = $('#toc');
-  $('#back').onclick = () => history.length > 1 ? history.back() : (location.hash = '#/');
+  $('#back').onclick = async () => {
+    if (penOn && !(await confirmBox('펜을 종료하고 나가겠습니까?', '칠한 내용은 저장되어 있어요.', '종료', '계속 칠하기'))) return;
+    setPen(false);
+    navs > 0 ? history.back() : (location.hash = '#/');
+  };
+  $('#penBtn').onclick = () => penOn ? askEndPen() : setPen(true);
+  $('#penEnd').onclick = askEndPen;
+  $('#penbar').addEventListener('pointerdown', (e) => { if (e.target.closest('[data-pc]')) e.preventDefault(); }); // 선택 유지
+  $('#penbar').querySelectorAll('[data-pc]').forEach((b) => b.onclick = () => {
+    penColor = b.dataset.pc; store.set('penColor', penColor); drawPenbar();
+    const st = hlState && hlState.mode === 'new' ? hlState : selState();
+    if (st && !st.cross) { paint(st, penColor); hideBar(); }
+  });
+  setPen(penOn);
   $('#tocBtn').onclick = () => tocEl.classList.toggle('open');
   tocEl.addEventListener('click', (e) => {
     const a = e.target.closest('a[data-go]'); if (!a) return;
@@ -756,6 +822,7 @@ async function renderLaw(id, target) {
       b.classList.toggle('on', on); b.innerHTML = on ? ICON.bmOn : ICON.bm; art.classList.toggle('bm', on);
       const ta = app.querySelector(`#toc a[data-go="a-${CSS.escape(it.n)}"]`); if (ta) ta.classList.toggle('bmk', on);
     }
+    if (b.dataset.act === 'pen') { if (!penOn) setPen(true); else toast('문구를 끌어서 선택하면 칠해져요'); return; }
     if (b.dataset.act === 'copy') copyText(`「${law.name}」 ${it.n}${it.title ? '(' + it.title + ')' : ''}\n` + it.x.split('\n').map((l, i) => i === 0 ? l.replace(/^제\d+조(?:의\d+)?\s*\([^)]*\)\s*/, '') : l).filter(Boolean).join('\n'));
     if (b.dataset.act === 'link') window.open(lawGoKr(law.name, it.n), '_blank', 'noopener');
   });
@@ -805,32 +872,70 @@ hlbar.addEventListener('click', (e) => {
   const c = b.dataset.c; if (!c) return;
   if (st.mode === 'edit') {
     const a = hls(); const h = a.find((x) => x.id === st.id); if (h) { h.c = c; saveHls(a); rerenderArt(h.n); }
-  } else {
-    const it = hlLaw.items.find((x) => x.t === 'a' && x.n === st.n);
-    const a = hls();
-    a.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), law: hlLaw.id, name: hlLaw.name, n: st.n, title: it ? it.title : '', s: st.s, e: st.e, q: st.q, c, at: Date.now() });
-    saveHls(a); getSelection().removeAllRanges(); rerenderArt(st.n);
-    toast(`${HL_NAME[c]}${c === 'u' ? '' : ' 형광펜'}으로 표시했어요`);
-  }
+  } else paint(st, c);
   hideBar();
+});
+function paint(st, c) {
+  const it = hlLaw.items.find((x) => x.t === 'a' && x.n === st.n);
+  const a = hls();
+  a.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), law: hlLaw.id, name: hlLaw.name, n: st.n, title: it ? it.title : '', s: st.s, e: st.e, q: st.q, c, at: Date.now() });
+  saveHls(a); getSelection().removeAllRanges(); rerenderArt(st.n);
+  toast(`${HL_NAME[c]}${c === 'u' ? '' : ' 형광펜'}으로 칠했어요`);
+}
+/* 펜 모드: 켜 두면 마우스로 끌기만 해도 바로 칠해짐 (터치는 색 막대에서 한 번 더 선택) */
+let penOn = false;
+let penColor = store.get('penColor', 'y');
+function drawPenbar() {
+  const pb = $('#penbar'); if (!pb) return;
+  pb.hidden = !penOn;
+  pb.querySelectorAll('[data-pc]').forEach((b) => b.classList.toggle('on', b.dataset.pc === penColor));
+  const pbtn = $('#penBtn'); if (pbtn) pbtn.classList.toggle('on', penOn);
+}
+function setPen(on) {
+  penOn = !!on;
+  document.body.classList.toggle('pen-on', penOn);
+  drawPenbar();
+  if (!penOn) hideBar();
+}
+async function askEndPen() {
+  if (await confirmBox('펜을 종료하겠습니까?', '칠한 내용은 그대로 저장돼요.', '종료', '계속 칠하기')) { setPen(false); toast('펜을 종료했어요'); }
+}
+function selState() {
+  const sel = getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return null;
+  const r = sel.getRangeAt(0);
+  const el = (r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement)?.closest('.art .body');
+  if (!el) return { cross: !!sel.anchorNode?.parentElement?.closest('.art .body') };
+  const s = rangeOffset(el, r.startContainer, r.startOffset), e = rangeOffset(el, r.endContainer, r.endOffset);
+  const q = el.textContent.slice(s, e);
+  if (!q.trim()) return null;
+  return { mode: 'new', s, e, q, n: el.closest('.art').dataset.n, rect: r.getBoundingClientRect() };
+}
+document.addEventListener('pointerup', (e) => {
+  if (!penOn || e.pointerType !== 'mouse' || !hlLaw || e.target.closest('.hlbar,.penbar,.modal')) return;
+  setTimeout(() => {
+    const st = selState(); if (!st) return;
+    if (st.cross) return toast('한 조문 안에서만 칠할 수 있어요');
+    paint(st, penColor); hideBar();
+  }, 10);
 });
 let selT;
 function onSel() {
   if (!hlLaw || !location.hash.startsWith('#/law/')) return;
-  const sel = getSelection();
-  if (!sel.rangeCount || sel.isCollapsed) { if (hlState && hlState.mode === 'new') hideBar(); return; }
-  const r = sel.getRangeAt(0);
-  const el = (r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement)?.closest('.art .body');
-  if (!el) { const a = sel.anchorNode?.parentElement?.closest('.art .body'); if (a) toast('한 조문 안에서만 칠할 수 있어요'); return; }
-  const s = rangeOffset(el, r.startContainer, r.startOffset), e = rangeOffset(el, r.endContainer, r.endOffset);
-  const q = el.textContent.slice(s, e);
-  if (!q.trim()) return;
-  hlState = { mode: 'new', s, e, q, n: el.closest('.art').dataset.n };
-  showBar(r.getBoundingClientRect(), 'new');
+  if (mouseDown) return; // 끄는 중에는 기다림
+  const st = selState();
+  if (!st) { if (hlState && hlState.mode === 'new') hideBar(); return; }
+  if (st.cross) return toast('한 조문 안에서만 칠할 수 있어요');
+  hlState = st;
+  showBar(st.rect, 'new');
+  if (penOn) hlbar.querySelector(`.sw.${penColor}`)?.focus();
 }
+let mouseDown = false;
+document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse' && !e.target.closest('.hlbar')) mouseDown = true; });
+document.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') { mouseDown = false; if (!penOn) { clearTimeout(selT); selT = setTimeout(onSel, 30); } } });
 document.addEventListener('selectionchange', () => { clearTimeout(selT); selT = setTimeout(onSel, 220); });
 document.addEventListener('scroll', () => { if (hlState && hlState.mode === 'edit') hideBar(); }, { passive: true });
-addEventListener('hashchange', hideBar);
+addEventListener('hashchange', () => { hideBar(); if (!location.hash.startsWith('#/law/')) setPen(false); });
 function setupHighlighter(law) {
   hlLaw = law;
   $('#arts').addEventListener('click', (e) => {
@@ -858,7 +963,8 @@ function route() {
   window.scrollTo(0, 0);
   return renderHome('');
 }
-addEventListener('hashchange', route);
+let navs = 0;
+addEventListener('hashchange', () => { navs++; route(); });
 
 (async () => {
   try { await loadIndex(); }
