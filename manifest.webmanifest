@@ -1,0 +1,16 @@
+{
+  "name": "법대로 — 나만의 실무 법령집",
+  "short_name": "법대로",
+  "description": "신탁·정비사업·건축·민사 법령을 온·오프라인에서 바로 찾아보는 법령집",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f2ea",
+  "theme_color": "#f6f2ea",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

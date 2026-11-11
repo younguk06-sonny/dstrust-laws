@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#f6f2ea"/>
+  <g transform="rotate(-5 256 256)">
+    <rect x="96" y="96" width="320" height="320" rx="56" fill="#b3261e"/>
+    <rect x="118" y="118" width="276" height="276" rx="40" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="8"/>
+    <text x="256" y="338" text-anchor="middle" font-family="'Noto Serif KR','Nanum Myeongjo','Batang',serif" font-weight="900" font-size="230" fill="#fff">法</text>
+  </g>
+</svg>
