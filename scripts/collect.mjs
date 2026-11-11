@@ -184,7 +184,11 @@ function parseLawText(text) {
       started = true;
       if (cur && cur.n === m[1] && cur.body === 0) { // 머리 줄의 반복 → 건너뜀
         if (m[3]) { cur.x += '\n' + m[3]; cur.body++; }
-      } else { newArt(m[1], m[2]); if (m[3]) { cur.x += '\n' + m[3]; cur.body++; } }
+        continue;
+      }
+      if (!cur) { newArt(m[1], m[2]); if (m[3]) { cur.x += '\n' + m[3]; cur.body++; } continue; }
+      // 그 밖의 "제N조(…)…" 줄은 다른 조문을 인용하는 본문(예: "제419조(제2항…)는 … 준용한다")
+      cur.x += '\n' + line; cur.body++;
       continue;
     }
     m = line.match(ART_PLAIN);
