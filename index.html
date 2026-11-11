@@ -143,6 +143,42 @@ mark{background:var(--hl);color:var(--hl-ink);border-radius:2px;padding:0 1px}
 .chg{border-left:3px solid var(--seal);background:var(--card);padding:10px 14px;border-radius:0 10px 10px 0;margin-bottom:8px;cursor:pointer}
 .chg .d{font-size:12px;color:var(--mute)}
 
+/* 최근 검색 */
+.hints-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.hints-row .lbl2{font-size:12px;color:var(--mute);font-weight:600;margin-right:2px}
+.rq{display:inline-flex;align-items:center;border:1px solid var(--line2);background:var(--card);border-radius:999px;font-size:12.5px}
+.rq .go{border:0;background:transparent;padding:4px 3px 4px 11px}
+.rq .x{border:0;background:transparent;padding:4px 9px 4px 4px;color:var(--mute);font-size:11px}
+.linkbtn{border:0;background:transparent;font-size:12px;color:var(--mute);text-decoration:underline;padding:4px}
+/* 형광펜 */
+.hlm{border-radius:2px;cursor:pointer;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.hl-y{background:#fff59d} .hl-g{background:#b9f0b4} .hl-p{background:#ffc4dc} .hl-b{background:#bfe0ff}
+.hl-u{background:none;text-decoration:underline;text-decoration-color:var(--seal);text-decoration-thickness:2px;text-underline-offset:4px}
+:root[data-theme="dark"] .hlm:not(.hl-u){color:#1d2433}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hlm:not(.hl-u){color:#1d2433}}
+.hlbar{position:fixed;z-index:60;display:none;gap:6px;align-items:center;background:var(--ink);color:var(--paper);border-radius:14px;padding:7px 9px;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+.hlbar.on{display:flex}
+.hlbar .sw{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.75);padding:0}
+.hlbar .sw.y{background:#fff59d}.hlbar .sw.g{background:#b9f0b4}.hlbar .sw.p{background:#ffc4dc}.hlbar .sw.b{background:#bfe0ff}
+.hlbar .sw.u{background:transparent;color:var(--paper);font-weight:800;text-decoration:underline;text-decoration-color:#e0574d;text-decoration-thickness:2px}
+.hlbar .t{border:0;background:transparent;color:var(--paper);font-size:13px;padding:5px 8px;border-radius:8px;white-space:nowrap}
+.hlbar .t:hover{background:rgba(255,255,255,.12)}
+.hlbar .sep{width:1px;height:22px;background:rgba(255,255,255,.25)}
+/* 책갈피 */
+.art.bm{box-shadow:inset 3px 0 0 var(--seal);padding-left:12px}
+.bmk-memo{font-family:var(--sans);font-size:13px;color:var(--seal);background:var(--seal-soft);border-radius:8px;padding:3px 10px;margin:6px 0 2px;display:inline-block}
+.toc a.bmk::before{content:"🔖 "}
+.mk-item{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:8px;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.mk-item:hover{border-color:var(--line2)}
+.mk-item .main{flex:1;min-width:0}
+.mk-item .del{border:0;background:transparent;color:var(--mute);padding:2px 6px;border-radius:6px}
+.mk-item .del:hover{background:var(--chip)}
+.mk-item .q{font-family:var(--serif);font-size:14.5px;margin-top:3px;line-height:1.6}
+.mk-item .ln{font-size:12px;color:var(--mute)}
+.backup{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+@media (max-width:760px){
+  .hlbar{left:50%!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%)}
+}
 @media (max-width:760px){
   .lawview{grid-template-columns:minmax(0,1fr)}
   .toc{display:none;position:fixed;inset:58px 0 0 0;max-height:none;background:var(--paper);z-index:30;padding:14px 16px 40px;font-size:14px}
@@ -304,20 +340,60 @@ async function copyText(s) {
 const lawGoKr = (name, n) => `https://www.law.go.kr/법령/${encodeURIComponent(nz(name))}${n ? '/' + encodeURIComponent(n) : ''}`;
 const favs = () => store.get('favs', []);
 const isFav = (id, n) => favs().some((f) => f.id === id && f.n === n);
-function toggleFav(law, a) {
-  let f = favs();
-  if (isFav(law.id, a.n)) f = f.filter((x) => !(x.id === law.id && x.n === a.n));
-  else f.unshift({ id: law.id, name: law.name, n: a.n, title: a.title, at: Date.now() });
-  store.set('favs', f.slice(0, 300));
-  return isFav(law.id, a.n);
+const favOf = (id, n) => favs().find((f) => f.id === id && f.n === n);
+function addBookmark(law, a, memo) {
+  const f = favs().filter((x) => !(x.id === law.id && x.n === a.n));
+  f.unshift({ id: law.id, name: law.name, n: a.n, title: a.title, memo: memo || '', at: Date.now() });
+  store.set('favs', f.slice(0, 500));
 }
+function removeBookmark(id, n) { store.set('favs', favs().filter((x) => !(x.id === id && x.n === n))); }
+const recents = () => store.get('recent_q', []);
+function addRecent(q) {
+  q = String(q || '').trim(); if (q.length < 2) return;
+  store.set('recent_q', [q, ...recents().filter((x) => x !== q)].slice(0, 12));
+}
+const hls = () => store.get('hls', []);
+const saveHls = (a) => store.set('hls', a.slice(-3000));
+const HL_NAME = { y: '노랑', g: '초록', p: '분홍', b: '파랑', u: '밑줄' };
 const ICON = {
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
   starOn: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>',
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  bm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  bmOn: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 5 4 4L9 19H5v-4z"/><path d="M4 22h16"/></svg>',
   mag: '<svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
 };
+
+/* ───── 형광펜: 조문 본문 글자 위치(시작~끝)로 저장 ───── */
+function textNodes(el) { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); const a = []; let n; while ((n = w.nextNode())) a.push(n); return a; }
+function rangeOffset(el, node, off) { const r = document.createRange(); r.selectNodeContents(el); r.setEnd(node, off); return r.toString().length; }
+function wrapRange(el, s, e, cls, hid) {
+  let pos = 0;
+  for (const t of textNodes(el)) {
+    const len = t.data.length;
+    const a = Math.max(s, pos), b = Math.min(e, pos + len);
+    if (a < b) {
+      let node = t;
+      if (b - pos < len) node.splitText(b - pos);
+      if (a - pos > 0) node = node.splitText(a - pos);
+      const sp = document.createElement('span');
+      sp.className = 'hlm hl-' + cls; sp.dataset.hid = hid;
+      node.parentNode.insertBefore(sp, node); sp.appendChild(node);
+    }
+    pos += len;
+    if (pos >= e) break;
+  }
+}
+function applyHls(el, lawId, n) {
+  const txt = el.textContent;
+  for (const h of hls().filter((x) => x.law === lawId && x.n === n)) {
+    let s0 = h.s, e0 = h.e;
+    if (txt.slice(s0, e0) !== h.q) { const i = txt.indexOf(h.q); if (i < 0) continue; s0 = i; e0 = i + h.q.length; }
+    wrapRange(el, s0, e0, h.c, h.id);
+  }
+}
 
 function bodyHTML(text, terms) {
   const lines = String(text).split('\n');
@@ -354,9 +430,7 @@ function renderHome(q = '') {
         <input id="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="법령·조문 검색  (예: 신탁법 22조, 도정법 시행령 47조, 강제집행)" value="${esc(q)}">
         <button class="clr" id="clr" aria-label="지우기">✕</button>
       </div>
-      <div class="hints">
-        ${['신탁법 22조','자본시장법 103조','도정법 74조','건축물분양법 4조','관리처분계획','분양보증','강제집행'].map((h) => `<button class="hint">${h}</button>`).join('')}
-      </div>
+      <div id="hints"></div>
     </section>
     <div id="body"></div>`;
   const inp = $('#q');
@@ -367,9 +441,22 @@ function renderHome(q = '') {
   });
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(t); go(inp.value, true); } });
   $('#clr').onclick = () => { inp.value = ''; $('.search').classList.remove('has'); go(''); inp.focus(); };
-  app.querySelectorAll('.hint').forEach((b) => b.onclick = () => { inp.value = b.textContent; $('.search').classList.add('has'); go(b.textContent, true); });
+  const pick = (v) => { inp.value = v; $('.search').classList.add('has'); go(v, true); };
+  function drawHints() {
+    const rq = recents();
+    let h = '';
+    if (rq.length) h += `<div class="hints-row"><span class="lbl2">최근 검색</span>${rq.map((x, i) => `<span class="rq"><button class="go" data-i="${i}">${esc(x)}</button><button class="x" data-x="${i}" aria-label="${esc(x)} 지우기">✕</button></span>`).join('')}<button class="linkbtn" id="rqClear">전체 지우기</button></div>`;
+    h += `<div class="hints-row">${rq.length ? '<span class="lbl2">예시</span>' : ''}${['신탁법 22조','자본시장법 103조','도정법 74조','건축물분양법 4조','관리처분계획','분양보증','강제집행'].map((x) => `<button class="hint">${x}</button>`).join('')}</div>`;
+    const el = $('#hints'); el.innerHTML = h;
+    el.querySelectorAll('.hint').forEach((b) => b.onclick = () => pick(b.textContent));
+    el.querySelectorAll('.rq .go').forEach((b) => b.onclick = () => pick(rq[+b.dataset.i]));
+    el.querySelectorAll('.rq .x').forEach((b) => b.onclick = () => { store.set('recent_q', rq.filter((_, i) => i !== +b.dataset.x)); drawHints(); });
+    const c = $('#rqClear'); if (c) c.onclick = () => { store.set('recent_q', []); drawHints(); };
+  }
+  drawHints();
   function go(v, enter) {
     const s = v.trim();
+    if (enter) addRecent(s);
     history.replaceState(null, '', s ? '#/search/' + encodeURIComponent(s) : '#/');
     if (s) doSearch(s, enter); else renderTabs();
   }
@@ -383,7 +470,7 @@ function renderTabs() {
   body.innerHTML = `
     <nav class="tabs">
       <button class="tab ${currentTab==='laws'?'on':''}" data-t="laws">법령 목록<span class="n">${idx.laws.length}</span></button>
-      <button class="tab ${currentTab==='fav'?'on':''}" data-t="fav">즐겨찾기<span class="n">${fv.length}</span></button>
+      <button class="tab ${currentTab==='fav'?'on':''}" data-t="fav">책갈피·형광펜<span class="n">${fv.length + hls().length}</span></button>
       <button class="tab ${currentTab==='chg'?'on':''}" data-t="chg">최근 개정</button>
     </nav>
     <div id="tabbody"></div>
@@ -416,13 +503,47 @@ const daysAgo = (d) => (Date.now() - new Date(d + 'T00:00:00+09:00').getTime()) 
 
 function renderFavs(tb) {
   const fv = favs();
-  if (!fv.length) { tb.innerHTML = `<div class="empty"><div class="big">☆</div>조문 옆 별표를 누르면 여기에 모여요.</div>`; return; }
-  tb.innerHTML = '<div style="margin-top:12px"></div>' + fv.map((f) => `
-    <div class="res" data-href="#/law/${f.id}/${encodeURIComponent(f.n)}">
-      <div class="h"><span class="an">${esc(f.n)}</span><span>${esc(f.title)}</span></div>
-      <div class="ln">${esc(f.name)}</div>
-    </div>`).join('');
-  tb.querySelectorAll('.res').forEach((r) => r.onclick = () => location.hash = r.dataset.href);
+  const hs = [...hls()].sort((a, b) => b.at - a.at);
+  let h = '';
+  h += `<div class="section-t">🔖 책갈피 ${fv.length}</div>`;
+  h += fv.length ? fv.map((f, i) => `
+    <div class="mk-item" data-href="#/law/${f.id}/${encodeURIComponent(f.n)}">
+      <div class="main"><div><b>${esc(f.n)}</b> ${esc(f.title)}</div>
+        ${f.memo ? `<div class="bmk-memo">${esc(f.memo)}</div>` : ''}
+        <div class="ln">${esc(f.name)}</div></div>
+      <button class="del" data-delbm="${i}" title="책갈피 빼기">✕</button>
+    </div>`).join('') : `<div class="note">조문 오른쪽의 책갈피 버튼(🔖)을 누르면 메모와 함께 여기에 모여요.</div>`;
+  h += `<div class="section-t">🖍 형광펜 ${hs.length}</div>`;
+  h += hs.length ? hs.map((x) => `
+    <div class="mk-item" data-href="#/law/${x.law}/${encodeURIComponent(x.n)}">
+      <div class="main"><div class="ln">${esc(x.name)} ${esc(x.n)}${x.title ? '(' + esc(x.title) + ')' : ''}</div>
+        <div class="q"><span class="hlm hl-${x.c}">${esc(x.q.length > 160 ? x.q.slice(0, 160) + '…' : x.q)}</span></div></div>
+      <button class="del" data-delhl="${x.id}" title="형광펜 지우기">✕</button>
+    </div>`).join('') : `<div class="note">조문을 읽다가 중요한 문구를 손가락이나 마우스로 끌어서 선택하면 형광펜 도구가 나타나요.</div>`;
+  h += `<div class="section-t">다른 기기로 옮기기</div>
+    <div class="note" style="margin-top:0">책갈피·형광펜은 지금 쓰는 기기(브라우저)에만 저장돼요. 폰에서 칠한 것을 회사 PC 오프라인 파일로 옮기려면 내보낸 파일을 가져오기 하세요.</div>
+    <div class="backup"><button class="iconbtn" id="exp">내보내기(파일 저장)</button><button class="iconbtn" id="imp">가져오기</button><input type="file" id="impf" accept=".json,application/json" hidden></div>`;
+  tb.innerHTML = h;
+  tb.querySelectorAll('.mk-item').forEach((r) => r.onclick = (e) => { if (e.target.closest('.del')) return; location.hash = r.dataset.href; });
+  tb.querySelectorAll('[data-delbm]').forEach((b) => b.onclick = () => { const f = favs()[+b.dataset.delbm]; removeBookmark(f.id, f.n); renderTabs(); });
+  tb.querySelectorAll('[data-delhl]').forEach((b) => b.onclick = () => { saveHls(hls().filter((x) => x.id !== b.dataset.delhl)); renderTabs(); });
+  $('#exp').onclick = () => {
+    const blob = new Blob([JSON.stringify({ app: '부동산신탁 관계법령', at: new Date().toISOString(), favs: favs(), hls: hls(), recent_q: recents() })], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `내_책갈피_형광펜_${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+    toast('파일로 저장했어요');
+  };
+  $('#imp').onclick = () => $('#impf').click();
+  $('#impf').onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      const fm = new Map(favs().map((x) => [x.id + '|' + x.n, x])); for (const x of j.favs || []) if (!fm.has(x.id + '|' + x.n)) fm.set(x.id + '|' + x.n, x);
+      const hm = new Map(hls().map((x) => [x.id, x])); for (const x of j.hls || []) if (!hm.has(x.id)) hm.set(x.id, x);
+      store.set('favs', [...fm.values()]); saveHls([...hm.values()]);
+      toast(`가져왔어요 (책갈피 ${(j.favs || []).length} · 형광펜 ${(j.hls || []).length})`); renderTabs();
+    } catch { toast('파일을 읽지 못했어요'); }
+  };
 }
 
 function renderChanges(tb) {
@@ -459,12 +580,12 @@ async function doSearch(q, enter) {
       const n = `제${m[1]}조${m[2] ? '의' + m[2] : ''}`;
       if (enter) { location.hash = `#/law/${r.law.id}/${encodeURIComponent(n)}`; return; }
       body.innerHTML = `<div class="res" id="jumpres"><div class="h"><span class="an">${esc(n)}</span><span class="ln">${esc(r.law.name)}</span></div><div class="sn">엔터 또는 눌러서 바로 보기</div></div>`;
-      $('#jumpres').onclick = () => location.hash = `#/law/${r.law.id}/${encodeURIComponent(n)}`;
+      $('#jumpres').onclick = () => { addRecent(q); location.hash = `#/law/${r.law.id}/${encodeURIComponent(n)}`; };
       return;
     }
     if (!r.rest) {
       body.innerHTML = `<div class="res" id="jumpres"><div class="h"><span class="an">${esc(r.law.name)}</span></div><div class="sn">법령 전체 보기</div></div>`;
-      $('#jumpres').onclick = () => location.hash = `#/law/${r.law.id}`;
+      $('#jumpres').onclick = () => { addRecent(q); location.hash = `#/law/${r.law.id}`; };
       if (enter) location.hash = `#/law/${r.law.id}`;
       return;
     }
@@ -509,7 +630,7 @@ async function doSearch(q, enter) {
   }).join('');
   if (top.length && online) h += `<div class="foot"><a href="https://www.law.go.kr/lsSc.do?menuId=1&query=${encodeURIComponent(q)}" target="_blank" rel="noopener">담아두지 않은 법령까지 법제처에서 찾기 ↗</a></div>`;
   body.innerHTML = h;
-  body.querySelectorAll('.res').forEach((el) => el.onclick = () => { sessionStorage.setItem('bd.hl', el.dataset.q); location.hash = el.dataset.href; });
+  body.querySelectorAll('.res').forEach((el) => el.onclick = () => { addRecent(q); sessionStorage.setItem('bd.hl', el.dataset.q); location.hash = el.dataset.href; });
 }
 
 /* ───── 화면: 법령 본문 ───── */
@@ -531,15 +652,16 @@ async function renderLaw(id, target) {
       toc += `<a class="h" href="#" data-go="${hid}">${esc(it.x)}</a>`;
       arts += `<div class="hd" id="${hid}">${esc(it.x)}</div>`;
     } else {
-      const fav = isFav(law.id, it.n);
-      toc += `<a href="#" data-go="a-${esc(it.n)}">${esc(it.n)} ${esc(it.title)}</a>`;
-      arts += `<article class="art" id="a-${esc(it.n)}" data-n="${esc(it.n)}">
+      const bmk = favOf(law.id, it.n);
+      toc += `<a href="#" class="${bmk ? 'bmk' : ''}" data-go="a-${esc(it.n)}">${esc(it.n)} ${esc(it.title)}</a>`;
+      arts += `<article class="art ${bmk ? 'bm' : ''}" id="a-${esc(it.n)}" data-n="${esc(it.n)}">
         <div class="ah"><span class="lb">${esc(it.n)}</span><span class="tt">${it.title ? '(' + esc(it.title) + ')' : ''}</span>
           <span class="acts">
-            <button data-act="fav" class="${fav ? 'on' : ''}" title="즐겨찾기" aria-label="즐겨찾기">${fav ? ICON.starOn : ICON.star}</button>
+            <button data-act="bm" class="${bmk ? 'on' : ''}" title="책갈피" aria-label="책갈피">${bmk ? ICON.bmOn : ICON.bm}</button>
             <button data-act="copy" title="조문 복사" aria-label="조문 복사">${ICON.copy}</button>
             ${online ? `<button data-act="link" title="법제처 원문" aria-label="법제처 원문">${ICON.link}</button>` : ''}
           </span></div>
+        ${bmk && bmk.memo ? `<div class="bmk-memo">🔖 ${esc(bmk.memo)}</div>` : ''}
         <div class="body">${bodyHTML(it.x, hl)}</div>
       </article>`;
     }
@@ -569,6 +691,8 @@ async function renderLaw(id, target) {
         <div id="arts">${arts}</div>
       </div>
     </div>`;
+  for (const el of app.querySelectorAll('.art')) applyHls(el.querySelector('.body'), law.id, el.dataset.n);
+  setupHighlighter(law);
   const tocEl = $('#toc');
   $('#back').onclick = () => history.length > 1 ? history.back() : (location.hash = '#/');
   $('#tocBtn').onclick = () => tocEl.classList.toggle('open');
@@ -596,6 +720,7 @@ async function renderLaw(id, target) {
     for (const el of app.querySelectorAll('.art')) {
       const it = law.items.find((x) => x.t === 'a' && x.n === el.dataset.n);
       el.querySelector('.body').innerHTML = bodyHTML(it.x, terms);
+      applyHls(el.querySelector('.body'), law.id, it.n);
       const c = el.querySelectorAll('mark').length; n += c;
       if (c && !first) first = el;
     }
@@ -616,7 +741,21 @@ async function renderLaw(id, target) {
   $('#arts').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
     const art = b.closest('.art'); const it = law.items.find((x) => x.t === 'a' && x.n === art.dataset.n);
-    if (b.dataset.act === 'fav') { const on = toggleFav(law, it); b.classList.toggle('on', on); b.innerHTML = on ? ICON.starOn : ICON.star; toast(on ? '즐겨찾기에 담았어요' : '즐겨찾기에서 뺐어요'); }
+    if (b.dataset.act === 'bm') {
+      const had = favOf(law.id, it.n);
+      art.querySelector('.bmk-memo')?.remove();
+      if (had) { removeBookmark(law.id, it.n); toast('책갈피를 뺐어요'); }
+      else {
+        const memo = prompt(`${it.n} 책갈피 메모 (비워둬도 돼요)`, '');
+        if (memo === null) return;
+        addBookmark(law, it, memo.trim());
+        if (memo.trim()) art.querySelector('.ah').insertAdjacentHTML('afterend', `<div class="bmk-memo">🔖 ${esc(memo.trim())}</div>`);
+        toast('책갈피를 꽂았어요');
+      }
+      const on = !had;
+      b.classList.toggle('on', on); b.innerHTML = on ? ICON.bmOn : ICON.bm; art.classList.toggle('bm', on);
+      const ta = app.querySelector(`#toc a[data-go="a-${CSS.escape(it.n)}"]`); if (ta) ta.classList.toggle('bmk', on);
+    }
     if (b.dataset.act === 'copy') copyText(`「${law.name}」 ${it.n}${it.title ? '(' + it.title + ')' : ''}\n` + it.x.split('\n').map((l, i) => i === 0 ? l.replace(/^제\d+조(?:의\d+)?\s*\([^)]*\)\s*/, '') : l).filter(Boolean).join('\n'));
     if (b.dataset.act === 'link') window.open(lawGoKr(law.name, it.n), '_blank', 'noopener');
   });
@@ -628,6 +767,81 @@ async function renderLaw(id, target) {
     else toast(`${target}는 이 법령에 없어요`);
   } else window.scrollTo(0, 0);
 }
+/* ───── 형광펜 도구 ───── */
+const hlbar = document.createElement('div');
+hlbar.className = 'hlbar'; hlbar.setAttribute('role', 'toolbar');
+document.body.appendChild(hlbar);
+let hlState = null; // {mode:'new', el, s, e, n} | {mode:'edit', id}
+let hlLaw = null;
+function hideBar() { hlbar.classList.remove('on'); hlState = null; }
+function showBar(rect, mode) {
+  hlbar.innerHTML = ['y', 'g', 'p', 'b'].map((c) => `<button class="sw ${c}" data-c="${c}" title="${HL_NAME[c]}" aria-label="${HL_NAME[c]} 형광펜"></button>`).join('')
+    + `<button class="sw u" data-c="u" title="밑줄" aria-label="밑줄">가</button><span class="sep"></span>`
+    + (mode === 'edit' ? `<button class="t" data-a="del">지우기</button>` : `<button class="t" data-a="copy">복사</button>`)
+    + `<button class="t" data-a="close" aria-label="닫기">✕</button>`;
+  hlbar.classList.add('on');
+  const bw = hlbar.offsetWidth, bh = hlbar.offsetHeight;
+  let x = rect.left + rect.width / 2 - bw / 2, y = rect.top - bh - 10;
+  if (y < 64) y = rect.bottom + 10;
+  hlbar.style.left = Math.max(8, Math.min(innerWidth - bw - 8, x)) + 'px';
+  hlbar.style.top = y + 'px';
+}
+function rerenderArt(n) {
+  const el = app.querySelector(`.art[data-n="${CSS.escape(n)}"]`); if (!el || !hlLaw) return;
+  const it = hlLaw.items.find((x) => x.t === 'a' && x.n === n);
+  const terms = ($('#find')?.value || '').trim().split(/\s+/).filter(Boolean);
+  const body = el.querySelector('.body'); body.innerHTML = bodyHTML(it.x, terms); applyHls(body, hlLaw.id, n);
+}
+hlbar.addEventListener('pointerdown', (e) => e.preventDefault()); // 선택 유지
+hlbar.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !hlState) return;
+  const st = hlState;
+  if (b.dataset.a === 'close') { getSelection().removeAllRanges(); return hideBar(); }
+  if (b.dataset.a === 'copy') { copyText(st.q); getSelection().removeAllRanges(); return hideBar(); }
+  if (b.dataset.a === 'del') {
+    const h = hls().find((x) => x.id === st.id); saveHls(hls().filter((x) => x.id !== st.id));
+    if (h) rerenderArt(h.n); toast('형광펜을 지웠어요'); return hideBar();
+  }
+  const c = b.dataset.c; if (!c) return;
+  if (st.mode === 'edit') {
+    const a = hls(); const h = a.find((x) => x.id === st.id); if (h) { h.c = c; saveHls(a); rerenderArt(h.n); }
+  } else {
+    const it = hlLaw.items.find((x) => x.t === 'a' && x.n === st.n);
+    const a = hls();
+    a.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), law: hlLaw.id, name: hlLaw.name, n: st.n, title: it ? it.title : '', s: st.s, e: st.e, q: st.q, c, at: Date.now() });
+    saveHls(a); getSelection().removeAllRanges(); rerenderArt(st.n);
+    toast(`${HL_NAME[c]}${c === 'u' ? '' : ' 형광펜'}으로 표시했어요`);
+  }
+  hideBar();
+});
+let selT;
+function onSel() {
+  if (!hlLaw || !location.hash.startsWith('#/law/')) return;
+  const sel = getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) { if (hlState && hlState.mode === 'new') hideBar(); return; }
+  const r = sel.getRangeAt(0);
+  const el = (r.commonAncestorContainer.nodeType === 1 ? r.commonAncestorContainer : r.commonAncestorContainer.parentElement)?.closest('.art .body');
+  if (!el) { const a = sel.anchorNode?.parentElement?.closest('.art .body'); if (a) toast('한 조문 안에서만 칠할 수 있어요'); return; }
+  const s = rangeOffset(el, r.startContainer, r.startOffset), e = rangeOffset(el, r.endContainer, r.endOffset);
+  const q = el.textContent.slice(s, e);
+  if (!q.trim()) return;
+  hlState = { mode: 'new', s, e, q, n: el.closest('.art').dataset.n };
+  showBar(r.getBoundingClientRect(), 'new');
+}
+document.addEventListener('selectionchange', () => { clearTimeout(selT); selT = setTimeout(onSel, 220); });
+document.addEventListener('scroll', () => { if (hlState && hlState.mode === 'edit') hideBar(); }, { passive: true });
+addEventListener('hashchange', hideBar);
+function setupHighlighter(law) {
+  hlLaw = law;
+  $('#arts').addEventListener('click', (e) => {
+    const sp = e.target.closest('.hlm'); if (!sp) return;
+    if (!getSelection().isCollapsed) return;
+    const h = hls().find((x) => x.id === sp.dataset.hid); if (!h) return;
+    hlState = { mode: 'edit', id: h.id };
+    showBar(sp.getBoundingClientRect(), 'edit');
+  });
+}
+
 function scrollToEl(el, flash) {
   if (!el) return;
   const y = el.getBoundingClientRect().top + scrollY - 118;
