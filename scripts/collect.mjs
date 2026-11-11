@@ -167,7 +167,7 @@ async function mcpSearch(name) {
 const ART_PAREN = /^(제\d+조(?:의\d+)?)\s*\(([^)]*)\)\s*(.*)$/;
 const ART_PLAIN = /^(제\d+조(?:의\d+)?)\s+(.+)$/;
 const HEAD_RE = /^제\d+(?:편|장|절|관)(?:의\d+)?\s/;
-const STOP_RE = /^(💡|ℹ️|⚠️|🔜|\[Instructions|부칙\s*\d+건|─{3,})/;
+const STOP_RE = /^(💡|ℹ️|⚠️|🔜|\[Instructions|부칙\s*\d+건|─{3,}|특정 조문 조회:|여러 조문 일괄 조회:)/;
 function parseLawText(text) {
   const items = [];
   let cur = null;
@@ -202,11 +202,42 @@ function parseLawText(text) {
   return items;
 }
 
+// 긴 법령은 공개 서버가 조문 목록(제목)만 돌려주므로, 본문이 빠진 조문을 묶음 조회로 채웁니다.
+const hasBody = (a) => a.x.includes('\n');
+async function fillBodies(meta, items) {
+  const empty = items.filter((i) => i.t === 'a' && !hasBody(i));
+  if (!empty.length) return 0;
+  const byN = new Map(items.filter((i) => i.t === 'a').map((i) => [i.n, i]));
+  let filled = 0;
+  const run = async (chunk) => {
+    const t = await mcpTool('execute_tool', { tool_name: 'get_batch_articles', params: { mst: meta.mst, articles: chunk.map((a) => a.n) } });
+    for (const got of parseLawText(t)) {
+      const it = byN.get(got.n);
+      if (it && hasBody(got) && !hasBody(it)) { it.x = got.x; if (!it.title) it.title = got.title; filled++; }
+    }
+  };
+  const SIZE = 25;
+  for (let i = 0; i < empty.length; i += SIZE) {
+    const chunk = empty.slice(i, i + SIZE);
+    try { await run(chunk); }
+    catch (e) { // 응답이 너무 크면 반으로 나눠 다시
+      log(`  묶음 재시도(${chunk[0].n}~): ${e.message.slice(0, 80)}`);
+      for (const half of [chunk.slice(0, 12), chunk.slice(12)]) { if (half.length) { await sleep(800); try { await run(half); } catch {} } }
+    }
+    await sleep(500);
+  }
+  return filled;
+}
+
 async function mcpLaw(meta) {
   const t = await mcpTool('get_law_text', { mst: meta.mst });
   const items = parseLawText(t);
   if (!items.some((i) => i.t === 'a')) throw new Error('조문을 찾지 못함');
-  return { ...meta, items };
+  const filled = await fillBodies(meta, items);
+  if (filled) log(`  본문 ${filled}개를 묶음 조회로 채움`);
+  const missing = items.filter((i) => i.t === 'a' && !hasBody(i) && !/삭제/.test(i.title)).length;
+  if (missing > 3) log(`  ⚠ 본문 없는 조문 ${missing}개`);
+  return { ...meta, items, missing };
 }
 
 /* ───────────────────────── 3) 수집 실행 ───────────────────────── */
@@ -234,7 +265,7 @@ async function collect() {
         const id = meta.lawId || meta.mst;
         const file = path.join(LAWDIR, `${id}.json`);
         const exists = await fs.stat(file).then(() => true).catch(() => false);
-        if (!FORCE && old && old.mst === meta.mst && exists && !old.sample) {
+        if (!FORCE && old && old.mst === meta.mst && exists && !old.sample && !(old.missing > 3)) {
           out.push({ ...old, cat: cat.id });
           log(`그대로  ${name} (MST ${meta.mst})`);
           continue;
@@ -245,7 +276,7 @@ async function collect() {
         await writeJSON(file, { id, name: law.name, mst: law.mst, kind: law.kind, dept: law.dept,
           promulgated: law.promulgated, effective: law.effective, fetched: today(), source, items: law.items });
         const entry = { id, cat: cat.id, name: law.name, mst: law.mst, kind: law.kind, dept: law.dept,
-          promulgated: law.promulgated, effective: law.effective, fetched: today(), articles,
+          promulgated: law.promulgated, effective: law.effective, fetched: today(), articles, missing: law.missing || 0,
           bytes: JSON.stringify(law.items).length };
         out.push(entry);
         if (old && old.mst !== meta.mst && !old.sample) {
