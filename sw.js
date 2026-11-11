@@ -1,5 +1,5 @@
-// 법대로 서비스 워커 — 한 번 열면 인터넷 없이도 열리도록 저장합니다.
-const SHELL = 'bd-shell-v1';
+// 부동산신탁 관계법령 서비스 워커 — 한 번 열면 인터넷 없이도 열리도록 저장합니다.
+const SHELL = 'bd-shell-v2';
 const DATA = 'bd-data-v1';
 const SHELL_FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 

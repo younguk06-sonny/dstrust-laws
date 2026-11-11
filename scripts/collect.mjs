@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 법대로 — 법령 자동 수집 스크립트
+// 부동산신탁 관계법령 — 법령 자동 수집 스크립트
 // - LAW_OC(법제처 Open API 인증키)가 있으면 법제처 API에서 직접 받습니다(정확·빠름).
 // - 없으면 공개 법령 MCP 서버(mcp.gomdori.app/law, 공용 한도)로 받습니다.
 // - 시행 중인 버전(MST)이 바뀐 법령만 다시 받고, 바뀐 내역은 data/changes.json에 남깁니다.
@@ -20,7 +20,7 @@ const FORCE = process.argv.includes('--force');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); // KST
-const log = (...a) => console.log('[법대로]', ...a);
+const log = (...a) => console.log('[부동산신탁 관계법령]', ...a);
 
 async function readJSON(p, fallback) {
   try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return fallback; }
